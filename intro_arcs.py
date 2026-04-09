@@ -34,7 +34,8 @@ def main(batch_size: int):
         data = pd.read_parquet(data_file)
         clean_texts = list(data["intro_statement_clean"])
         concept_matrix, offsets = model.transform(clean_texts)
-        data["sentiment_arcs"] = dict(zip(concept_names, concept_matrix))
+        for name, values in zip(concept_names, concept_matrix):
+            data[f"{name}_arc"] = values
         data["token_offsets"] = offsets
         print("Saving")
         data.to_parquet(out_dir.joinpath(f"{bank_name}_intro-arcs.parquet"))
