@@ -3,8 +3,10 @@ import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
 import optax as ox
+import plotly.graph_objects as go
 from gpjax.parameters import Parameter
 from jax import config
+from plotly.colors import convert_colors_to_same_type, unlabel_rgb
 
 config.update("jax_enable_x64", True)
 
@@ -49,3 +51,63 @@ def fit_gp(arc: list[np.ndarray], token_offsets: list[list[tuple]]) -> tuple:
     pred_mean = np.array(predictive_dist.mean)
     pred_sigma = np.array(jnp.sqrt(predictive_dist.variance))
     return np.array(grid), (pred_mean, pred_sigma)
+
+
+def rgba(r, g, b, a):
+    return f"rgba({r}, {g}, {b}, {a:.2f})"
+
+
+def plot_gp(
+    grid, pred_mean, pred_sigma, trace_name: str = None, trace_color: str = "#22577A"
+) -> go.Figure:
+    trace_rgb = convert_colors_to_same_type(trace_color, colortype="rgb")
+    (r, g, b) = unlabel_rgb(trace_rgb)
+    grid = grid[:, 0]
+    fig = go.Figure()
+    if trace_name is None:
+        trace_name = ""
+    fig.add_scatter(
+        name=f"Mean {trace_name}",
+        showlegend=False,
+        x=grid,
+        y=pred_mean,
+        mode="lines",
+        line=dict(
+            color=rgba(r, g, b, 1.0),
+            width=3,
+        ),
+    )
+    fig.add_scatter(
+        name="Upper Bound",
+        x=grid,
+        y=pred_mean + pred_sigma,
+        mode="lines",
+        marker=dict(color="#444"),
+        line=dict(width=0),
+        showlegend=False,
+    )
+    fig.add_scatter(
+        name="Lower Bound",
+        x=grid,
+        y=pred_mean - pred_sigma,
+        marker=dict(color="#444"),
+        line=dict(width=0),
+        mode="lines",
+        fillcolor=rgba(r, g, b, 0.4),
+        fill="tonexty",
+        showlegend=False,
+    )
+    fig.add_hline(y=0, line=dict(color="black", dash="dash", width=2))
+    fig = fig.update_layout(
+        margin=dict(t=40, b=20, l=10, r=10),
+        template="plotly_white",
+        font=dict(size=14, color="black", family="Merriweather"),
+        width=600,
+        height=400,
+    )
+    fig = fig.update_annotations(
+        font=dict(size=18, color="black", family="Merriweather"),
+    )
+    fig = fig.update_xaxes(matches="x", title="Character index")
+    fig = fig.update_yaxes(matches="y", title="Sentiment")
+    return fig
