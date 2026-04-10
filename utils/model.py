@@ -1,3 +1,6 @@
+import numpy as np
+from spacy.lang.en import English
+from tqdm import tqdm
 from turftopic import ConceptVectorProjection
 from turftopic.late import LateSentenceTransformer, LateWrapper
 
@@ -128,7 +131,42 @@ SEED_PHRASES = [
 ]
 
 
-def load_model(batch_size: int = 8) -> LateWrapper:
+class SentenceSeparatedEncoder:
+    def __init__(self, encoder: LateSentenceTransformer):
+        self.encoder = encoder
+
+    def encode(self, sentences, *args, **kwargs):
+        return self.encoder.encode(sentences, *args, **kwargs)
+
+    def encode_tokens(self, texts, batch_size=32, show_progress_bar=True) -> tuple:
+        nlp = English()
+        nlp.add_pipe("sentencizer")
+        embeddings = []
+        offsets = []
+        for text in tqdm(texts, desc="Producing embeddings for all sentences..."):
+            doc = nlp(text)
+            sentences = doc.sents
+            doc_embeddings = []
+            doc_offsets = []
+            for sentence in sentences:
+                sentence_start = doc[sentence.start].idx
+                sent_embeddings, sent_offsets = self.encoder.encode_tokens(
+                    sentence, batch_size=batch_size, show_progress_bar=False
+                )
+                _offsets = []
+                for start, end in sent_offsets:
+                    if (start == 0) and (end == 0):
+                        _offsets.append((0, 0))
+                    else:
+                        _offsets.append((sentence_start + start, sentence_start + end))
+                doc_embeddings.extend(sent_embeddings)
+                doc_offsets.extend(_offsets)
+            embeddings.append(np.stack(doc_embeddings))
+            offsets.append(doc_offsets)
+        return embeddings, offsets
+
+
+def load_model(batch_size: int = 8, separate_sentences: bool = False) -> LateWrapper:
     """Construct and load CVP model"""
     encoder = LateSentenceTransformer(
         "nvidia/llama-embed-nemotron-8b",
@@ -139,6 +177,8 @@ def load_model(batch_size: int = 8) -> LateWrapper:
         },
         tokenizer_kwargs={"padding_side": "left"},
     )
+    if separate_sentences:
+        encoder = SentenceSeparatedEncoder(encoder)
     model = LateWrapper(
         ConceptVectorProjection(seeds=SEED_PHRASES, encoder=encoder),
         batch_size=batch_size,
