@@ -25,6 +25,7 @@ def parse_args():
 
 def main(batch_size: int):
     for sentence_separated in [False, True]:
+        print(f"Loading model - Sentence Separation: {sentence_separated}")
         out_dir = Path(
             "results/{}".format("sentence" if sentence_separated else "contextual")
         )
