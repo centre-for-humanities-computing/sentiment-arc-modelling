@@ -24,21 +24,24 @@ def parse_args():
 
 
 def main(batch_size: int):
-    out_dir = Path("results")
-    out_dir.mkdir(exist_ok=True)
-    model = load_model(batch_size)
-    concept_names = model.get_feature_names_out()
-    for data_file in DATA_FILES:
-        print(f"Calculating arcs for {data_file}")
-        bank_name = Path(data_file).stem
-        data = pd.read_parquet(data_file)
-        clean_texts = list(data["intro_statement_clean"])
-        concept_matrix, offsets = model.transform(clean_texts)
-        for name, values in zip(concept_names, concept_matrix):
-            data[f"{name}_arc"] = values
-        data["token_offsets"] = offsets
-        print("Saving")
-        data.to_parquet(out_dir.joinpath(f"{bank_name}_intro-arcs.parquet"))
+    for sentence_separated in [False, True]:
+        out_dir = Path(
+            "results/{}".format("sentence" if sentence_separated else "contextual")
+        )
+        out_dir.mkdir(exist_ok=True, parents=True)
+        model = load_model(batch_size, sentence_separated=sentence_separated)
+        concept_names = model.get_feature_names_out()
+        for data_file in DATA_FILES:
+            print(f"Calculating arcs for {data_file}")
+            bank_name = Path(data_file).stem
+            data = pd.read_parquet(data_file)
+            clean_texts = list(data["intro_statement_clean"])
+            concept_matrix, offsets = model.transform(clean_texts)
+            for name, values in zip(concept_names, concept_matrix):
+                data[f"{name}_arc"] = values
+            data["token_offsets"] = offsets
+            print("Saving")
+            data.to_parquet(out_dir.joinpath(f"{bank_name}_intro-arcs.parquet"))
     print("DONE")
 
 
