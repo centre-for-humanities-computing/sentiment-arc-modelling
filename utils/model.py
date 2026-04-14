@@ -6,7 +6,7 @@ from turftopic.late import LateSentenceTransformer, LateWrapper
 
 SEED_PHRASES = [
     (
-        "monetary",
+        "monetary_sentiment",
         (
             # HAWKISH
             [
@@ -47,7 +47,7 @@ SEED_PHRASES = [
         ),
     ),
     (
-        "economic",
+        "economic_sentiment",
         (
             # POSITIVE
             [
@@ -88,27 +88,9 @@ SEED_PHRASES = [
         ),
     ),
     (
-        "certainty",
+        "uncertainty",
         (
-            # HIGH CERTAINTY
-            [
-                "Available information is broadly in line with the baseline scenario.",
-                "Inflation is expected to remain moderate and consistent with price stability.",
-                "Risks to the inflation outlook are broadly balanced.",
-                "Inflation expectations remain firmly anchored.",
-                "Current inflation developments are in line with previous expectations.",
-                "Wage and price developments remain subdued and consistent with price stability.",
-                "The recovery is proceeding broadly in line with earlier projections.",
-                "The Governing Council stands ready to act to preserve price stability and keep expectations anchored.",
-                "Inflation is expected to stabilize around the Committee’s 2 percent objective over the medium term.",
-                "Longer-term inflation expectations remain well anchored.",
-                "Incoming data were broadly in line with staff expectations.",
-                "The current policy stance remained appropriate given the baseline outlook.",
-                "The economy was expected to continue expanding at a moderate pace.",
-                "Resource slack was expected to keep inflation contained.",
-                "Financial markets largely anticipated no change in the policy rate.",
-            ],
-            # LOW CERTAINTY
+            # HIGH UNCERTAINTY
             [
                 "The outlook remains highly uncertain.",
                 "The recovery process is likely to be uneven and subject to high uncertainty.",
@@ -125,6 +107,24 @@ SEED_PHRASES = [
                 "Business investment remained a major source of uncertainty for the overall outlook.",
                 "The future course of the economy was subject to a marked degree of uncertainty.",
                 "Elevated uncertainty around the economic outlook justified maintaining the policy stance.",
+            ],
+            # LOW UNCERTAINTY
+            [
+                "Available information is broadly in line with the baseline scenario.",
+                "Inflation is expected to remain moderate and consistent with price stability.",
+                "Risks to the inflation outlook are broadly balanced.",
+                "Inflation expectations remain firmly anchored.",
+                "Current inflation developments are in line with previous expectations.",
+                "Wage and price developments remain subdued and consistent with price stability.",
+                "The recovery is proceeding broadly in line with earlier projections.",
+                "The Governing Council stands ready to act to preserve price stability and keep expectations anchored.",
+                "Inflation is expected to stabilize around the Committee’s 2 percent objective over the medium term.",
+                "Longer-term inflation expectations remain well anchored.",
+                "Incoming data were broadly in line with staff expectations.",
+                "The current policy stance remained appropriate given the baseline outlook.",
+                "The economy was expected to continue expanding at a moderate pace.",
+                "Resource slack was expected to keep inflation contained.",
+                "Financial markets largely anticipated no change in the policy rate.",
             ],
         ),
     ),
@@ -151,8 +151,10 @@ class SentenceSeparatedEncoder:
             for sentence in sentences:
                 sentence_start = doc[sentence.start].idx
                 sent_embeddings, sent_offsets = self.encoder.encode_tokens(
-                    sentence, batch_size=batch_size, show_progress_bar=False
+                    [sentence.text], batch_size=batch_size, show_progress_bar=False
                 )
+                sent_embeddings = sent_embeddings[0]
+                sent_offsets = sent_offsets[0]
                 _offsets = []
                 for start, end in sent_offsets:
                     if (start == 0) and (end == 0):

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils import load_model
+from utils.model import load_model
 
 DATA_FILES = [
     "dat/ecb.parquet",
@@ -24,23 +24,26 @@ def parse_args():
 
 
 def main(batch_size: int):
-    for sentence_separated in [False, True]:
-        print(f"Loading model - Sentence Separation: {sentence_separated}")
+    for separate_sentences in [True]:
+        print(f"Loading model - Sentence Separation: {separate_sentences}")
         out_dir = Path(
-            "results/{}".format("sentence" if sentence_separated else "contextual")
+            "results/{}".format("sentence" if separate_sentences else "contextual")
         )
         out_dir.mkdir(exist_ok=True, parents=True)
-        model = load_model(batch_size, sentence_separated=sentence_separated)
-        concept_names = model.get_feature_names_out()
+        model = load_model(batch_size, separate_sentences=separate_sentences)
+        concept_names = model.model.get_feature_names_out()
         for data_file in DATA_FILES:
             print(f"Calculating arcs for {data_file}")
             bank_name = Path(data_file).stem
             data = pd.read_parquet(data_file)
             clean_texts = list(data["intro_statement_clean"])
             concept_matrix, offsets = model.transform(clean_texts)
-            for name, values in zip(concept_names, concept_matrix):
-                data[f"{name}_arc"] = values
-            data["token_offsets"] = offsets
+            intro_statement_arcs = []
+            for concepts, offs in zip(concept_matrix, offsets):
+                entry = dict(zip(concept_names, concepts))
+                entry["character_window"] = offs
+                intro_statement_arcs.append(entry)
+            data["intro_statement_arcs"] = intro_statement_arcs
             print("Saving")
             data.to_parquet(out_dir.joinpath(f"{bank_name}_intro-arcs.parquet"))
     print("DONE")
