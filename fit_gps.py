@@ -50,7 +50,17 @@ CRISIS_PERIODS = {
         ("2020-02-01", "2020-05-01"),
     ],
 }
-DATA_FILES = ["results/ecb_intro-arc.parquet" "results/fed_intro-arc.parquet"]
+DATA_FILES = ["results/ecb_intro-arc.parquetresults/fed_intro-arc.parquet"]
+
+
+def stack_arcs(df: pd.DataFrame):
+    arcs = defaultdict(list)
+    offsets = []
+    for entry in df["intro_statement_arcs"]:
+        for arc_type in ARC_TYPES:
+            arcs[arc_type].append(entry[arc_type])
+        offsets.append(entry["character_window"])
+    return arcs, offsets
 
 
 def main():
@@ -64,6 +74,8 @@ def main():
         df["crisis"] = is_crisis(df["date"], periods=CRISIS_PERIODS[dataset_id])
         df["crisis"] = df["crisis"].map({False: "non_crisis", True: "crisis"})
         df = add_rate_change(df)
+        arcs, offsets = stack_arcs(df)
+        df = df.assign({"offsets": offsets, **arcs})
         for grouping_variable in ["crisis", "rate_direction"]:
             print(f"● Grouping by {grouping_variable}")
             predictive = defaultdict()
