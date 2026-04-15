@@ -43,7 +43,7 @@ def main(batch_size: int):
                 entry = dict(zip(concept_names, concepts.T))
                 entry["character_window"] = offs
                 intro_statement_arcs.append(entry)
-            data["intro_statement_arcs"] = intro_statement_arcs
+            data["intro_sentiment_arcs"] = intro_statement_arcs
             print("Saving")
             data.to_parquet(out_dir.joinpath(f"{bank_name}_intro-arcs.parquet"))
     print("DONE")
