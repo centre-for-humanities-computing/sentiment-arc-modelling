@@ -40,7 +40,7 @@ def main(batch_size: int):
             concept_matrix, offsets = model.transform(clean_texts)
             intro_statement_arcs = []
             for concepts, offs in zip(concept_matrix, offsets):
-                entry = dict(zip(concept_names, concepts))
+                entry = dict(zip(concept_names, concepts.T))
                 entry["character_window"] = offs
                 intro_statement_arcs.append(entry)
             data["intro_statement_arcs"] = intro_statement_arcs
