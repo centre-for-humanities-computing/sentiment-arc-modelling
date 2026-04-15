@@ -60,8 +60,8 @@ def rgba(r, g, b, a):
 def plot_gp(
     grid, pred_mean, pred_sigma, trace_name: str = None, trace_color: str = "#22577A"
 ) -> go.Figure:
-    trace_rgb = convert_colors_to_same_type(trace_color, colortype="rgb")
-    (r, g, b) = unlabel_rgb(trace_rgb)
+    trace_rgb, _ = convert_colors_to_same_type(trace_color, colortype="rgb")
+    (r, g, b) = unlabel_rgb(trace_rgb[0])
     grid = grid[:, 0]
     fig = go.Figure()
     if trace_name is None:
