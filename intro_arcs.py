@@ -55,7 +55,7 @@ def main(batch_size: int):
                 embeddings, embedding_offsets = model.encode_late(clean_texts)
                 print(" - Saving embeddings...")
                 joblib.dump(
-                    emb_path, dict(offsets=embedding_offsets, embeddings=embeddings)
+                    dict(offsets=embedding_offsets, embeddings=embeddings), emb_path
                 )
             concept_path = out_dir.joinpath(f"{bank_name}_concepts.joblib")
             if concept_path.is_file():
@@ -71,7 +71,7 @@ def main(batch_size: int):
                     clean_texts, embeddings=embeddings, offsets=embedding_offsets
                 )
                 joblib.dump(
-                    concept_path, dict(offsets=offsets, concept_matrix=concept_matrix)
+                    dict(offsets=offsets, concept_matrix=concept_matrix), concept_path
                 )
                 print(" - Saving concept matrix...")
             print("- Producing dataframe...")
