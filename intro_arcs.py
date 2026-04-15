@@ -52,7 +52,7 @@ def main(batch_size: int):
                 )
             else:
                 print(" - Producing embeddings...")
-                embeddings, embeddings_offsets = model.encode_late(clean_texts)
+                embeddings, embedding_offsets = model.encode_late(clean_texts)
                 print(" - Saving embeddings...")
                 joblib.dump(
                     emb_path, dict(offsets=embedding_offsets, embeddings=embeddings)
