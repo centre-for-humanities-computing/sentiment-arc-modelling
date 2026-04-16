@@ -18,8 +18,8 @@ def fit_gp(arc: list[np.ndarray], token_offsets: list[list[tuple]]) -> tuple:
     for doc_arc, offs in zip(arc, token_offsets):
         X.extend([start for start, _ in offs])
         Y.extend(doc_arc)
-    X = np.array(X).astype(np.float64)[:, None]
-    Y = np.array(Y).astype(np.float64)[:, None]
+    X = jnp.array(X).astype(jnp.float64)[None, :]
+    Y = jnp.array(Y).astype(jnp.float64)[None, :]
     grid = jnp.linspace(0, 15000, 500).reshape(-1, 1)
     meanf = gpx.mean_functions.Zero()
     likelihood = gpx.likelihoods.Gaussian(num_datapoints=len(X))

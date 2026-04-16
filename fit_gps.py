@@ -50,13 +50,13 @@ CRISIS_PERIODS = {
         ("2020-02-01", "2020-05-01"),
     ],
 }
-DATA_FILES = ["results/ecb_intro-arc.parquetresults/fed_intro-arc.parquet"]
+DATA_DIR = Path("results")
 
 
 def stack_arcs(df: pd.DataFrame):
     arcs = defaultdict(list)
     offsets = []
-    for entry in df["intro_statement_arcs"]:
+    for entry in df["intro_sentiment_arcs"]:
         for arc_type in ARC_TYPES:
             arcs[arc_type].append(entry[arc_type])
         offsets.append(entry["character_window"])
@@ -66,35 +66,42 @@ def stack_arcs(df: pd.DataFrame):
 def main():
     out_dir = Path("results/gps/")
     out_dir.mkdir(exist_ok=True, parents=True)
-    for data_file in DATA_FILES:
-        dataset_id, *_ = Path(data_file).stem.split("_")
-        print(f"\n\n===============Processing {dataset_id}================")
-        df = pd.read_parquet(data_file)
-        df["date"] = pd.to_datetime(df["date"])
-        df["crisis"] = is_crisis(df["date"], periods=CRISIS_PERIODS[dataset_id])
-        df["crisis"] = df["crisis"].map({False: "non_crisis", True: "crisis"})
-        df = add_rate_change(df)
-        arcs, offsets = stack_arcs(df)
-        df = df.assign({"offsets": offsets, **arcs})
-        for grouping_variable in ["crisis", "rate_direction"]:
-            print(f"● Grouping by {grouping_variable}")
-            predictive = defaultdict()
-            for group_name, group_df in df.groupby(grouping_variable):
-                print(f"   ‣ Processing group {group_name}")
-                for sentiment_type in ARC_TYPES:
-                    print(f"      ◦ Fitting GP for sentiment type: {sentiment_type}")
-                    arc = list(group_df[f"{sentiment_type}_arc"])
-                    offsets = list(group_df["offsets"])
-                    grid, (pred_mean, pred_sigma) = fit_gp(arc, offsets)
-                    predictive[sentiment_type][group_name] = (
-                        grid,
-                        pred_mean,
-                        pred_sigma,
-                    )
-            subdir = out_dir.joinpath(dataset_id)
-            subdir.mkdir(exist_ok=True)
-            print(f".........Saving {grouping_variable} GPs for {dataset_id}.........")
-            joblib.dump(predictive, subdir.joinpath(f"{grouping_variable}.joblib"))
+    for encoding in ["sentence", "contextual"]:
+        print(f"\n\n###############ENCODING: {encoding}################")
+        for dataset_id in ["ecb", "fed"]:
+            data_file = DATA_DIR.joinpath(encoding, f"{dataset_id}_intro-arcs.parquet")
+            print(f"\n\n===============Processing {dataset_id}================")
+            df = pd.read_parquet(data_file)
+            df = df.rename(columns={"Date": "date"})
+            df["date"] = pd.to_datetime(df["date"])
+            df["crisis"] = is_crisis(df["date"], periods=CRISIS_PERIODS[dataset_id])
+            df["crisis"] = df["crisis"].map({False: "non_crisis", True: "crisis"})
+            df = add_rate_change(df)
+            arcs, offsets = stack_arcs(df)
+            df = df.assign(offsets=offsets, **arcs)
+            for grouping_variable in ["crisis", "rate_direction"]:
+                print(f"● Grouping by {grouping_variable}")
+                predictive = defaultdict(dict)
+                for group_name, group_df in df.groupby(grouping_variable):
+                    print(f"   ‣ Processing group {group_name}")
+                    for sentiment_type in ARC_TYPES:
+                        print(
+                            f"      ◦ Fitting GP for sentiment type: {sentiment_type}"
+                        )
+                        arc = list(group_df[f"{sentiment_type}"])
+                        offsets = list(group_df["offsets"])
+                        grid, (pred_mean, pred_sigma) = fit_gp(arc, offsets)
+                        predictive[sentiment_type][group_name] = (
+                            grid,
+                            pred_mean,
+                            pred_sigma,
+                        )
+                subdir = out_dir.joinpath(dataset_id)
+                subdir.mkdir(exist_ok=True)
+                print(
+                    f".........Saving {grouping_variable} GPs for {dataset_id}........."
+                )
+                joblib.dump(predictive, subdir.joinpath(f"{grouping_variable}.joblib"))
     print("!DONE!")
 
 
